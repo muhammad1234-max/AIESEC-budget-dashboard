@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-aiesec-blue: #037Ef3;
+  --color-aiesec-teal: #0C8F8F;
+  --color-aiesec-dark: #1D2939;
+  --color-aiesec-light: #F4F7FE;
+}
+
+body {
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-900);
+}
