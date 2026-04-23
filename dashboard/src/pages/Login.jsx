@@ -80,7 +80,11 @@ export default function Login() {
 
           {error && (
             <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-500">
-              {error === 'invalid_credentials' ? 'Invalid username or password.' : 'Login failed. Please try again.'}
+              {error === 'invalid_credentials'
+                ? 'Invalid username or password.'
+                : error === 'server_not_configured'
+                  ? 'Admin login is not configured on the server. Set JWT_SECRET, ADMIN_USERNAME, and ADMIN_PASSWORD in Vercel environment variables, then redeploy.'
+                  : 'Login failed. Please try again.'}
             </div>
           )}
 
@@ -96,4 +100,3 @@ export default function Login() {
     </div>
   );
 }
-

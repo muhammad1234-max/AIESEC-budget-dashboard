@@ -2,6 +2,7 @@
   "buildCommand": "cd dashboard && npm ci && npm run build",
   "outputDirectory": "dashboard/dist",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
