@@ -1,9 +1,12 @@
 import pandas as pd
 import json
 import os
+import re
 
 file_path = 'Copy of AIESEC in KARACHI Budget Tool 26.27.xlsx'
 output_path = 'dashboard/public/data.json'
+
+MONTHS = ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan']
 
 def extract_financial_data(sheet_name):
     try:
@@ -36,7 +39,7 @@ def extract_financial_data(sheet_name):
         df_raw = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
         
         data = []
-        months = ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan']
+        months = MONTHS
         
         # Data starts from row 6 (index 6)
         for i in range(6, len(df_raw)):
@@ -86,55 +89,106 @@ def extract_financial_data(sheet_name):
         print(f"Error processing {sheet_name}: {e}")
         return []
 
-def extract_exchange_goals():
-    sheet_name = '2. Exchange Goals'
-    try:
-        df = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
-        
-        goals = {
-            "opens": {},
-            "approvals": {},
-            "realizations": {}
-        }
+def _normalize(text):
+    if text is None:
+        return ''
+    return re.sub(r'[^a-z0-9]+', ' ', str(text).lower()).strip()
 
-        # Programs start at row 11 (index 11) and repeat every 5 rows
-        # 11: oGV, 16: oGTa, 21: oGTe, 26: iGV, 31: iGTa, 36: iGTe
-        # Actually check if program name matches to be safe
-        
-        # Row offsets from start of block:
-        # 0: Header (Program Name)
-        # 1: Opens
-        # 2: Approvals
-        # 3: Realizations
-        
-        start_row = 11
-        block_size = 5
-        programs = ['oGV', 'oGTa', 'oGTe', 'iGV', 'iGTa', 'iGTe']
-        
-        for i, prog in enumerate(programs):
-            row_idx = start_row + (i * block_size)
-            
-            # Verify program name (col 1)
-            sheet_prog = df.iloc[row_idx, 1]
-            if str(sheet_prog).strip() != prog:
-                print(f"Warning: Expected {prog} at row {row_idx}, found {sheet_prog}")
-            
-            # Total is at col 16 (Q)
-            col_total = 16
-            
-            # Read values
-            opens_val = pd.to_numeric(df.iloc[row_idx + 1, col_total], errors='coerce')
-            approvals_val = pd.to_numeric(df.iloc[row_idx + 2, col_total], errors='coerce')
-            realizations_val = pd.to_numeric(df.iloc[row_idx + 3, col_total], errors='coerce')
-            
-            goals["opens"][prog] = float(opens_val) if not pd.isna(opens_val) else 0
-            goals["approvals"][prog] = float(approvals_val) if not pd.isna(approvals_val) else 0
-            goals["realizations"][prog] = float(realizations_val) if not pd.isna(realizations_val) else 0
-            
-        return goals
-    except Exception as e:
-        print(f"Error processing {sheet_name}: {e}")
-        return {}
+def _sum_matching_items(items, label):
+    label_norm = _normalize(label)
+    if not label_norm:
+        return {"values": {m: 0.0 for m in MONTHS}, "total": 0.0}
+
+    matches = []
+    for item in items:
+        desc_norm = _normalize(item.get('description'))
+        if not desc_norm:
+            continue
+        if desc_norm == label_norm:
+            matches.append(item)
+            continue
+        tokens = desc_norm.split()
+        if label_norm in tokens:
+            matches.append(item)
+            continue
+        if desc_norm.startswith(label_norm + ' '):
+            matches.append(item)
+            continue
+
+    summed = {"values": {m: 0.0 for m in MONTHS}, "total": 0.0}
+    for item in matches:
+        for m in MONTHS:
+            summed["values"][m] += float(item.get("values", {}).get(m, 0) or 0)
+        summed["total"] += float(item.get("total", 0) or 0)
+    return summed
+
+def _build_financial_node(name, children_template, budget_items, actual_items):
+    children = []
+    if isinstance(children_template, dict) and children_template:
+        for child_name, child_children in children_template.items():
+            children.append(_build_financial_node(child_name, child_children, budget_items, actual_items))
+        budget = {"values": {m: 0.0 for m in MONTHS}, "total": 0.0}
+        actual = {"values": {m: 0.0 for m in MONTHS}, "total": 0.0}
+        for child in children:
+            for m in MONTHS:
+                budget["values"][m] += child["budget"]["values"][m]
+                actual["values"][m] += child["actual"]["values"][m]
+            budget["total"] += child["budget"]["total"]
+            actual["total"] += child["actual"]["total"]
+    else:
+        budget = _sum_matching_items(budget_items, name)
+        actual = _sum_matching_items(actual_items, name)
+
+    return {
+        "name": name,
+        "budget": budget,
+        "actual": actual,
+        "children": children
+    }
+
+def build_financial_structure(budget_data, actual_data):
+    revenue_template = {
+        "ELD Products": {
+            "OGTA": {},
+            "OGTE": {},
+            "OGV": {},
+            "IGTA": {},
+            "EWA": {},
+            "YSF": {},
+            "EWA Initiatives": {},
+            "Partner Fees": {},
+            "Participant Fees": {},
+            "Others": {}
+        },
+        "YSF": {
+            "YSF Partner Fees": {},
+            "YSF Participant Fees": {},
+            "YSF Others": {}
+        },
+        "Other Portfolios and Initiatives": {
+            "Participant Fees": {},
+            "Partner Fees": {}
+        }
+    }
+
+    costs_template = {
+        "ELD Products": {
+            "OGV": {},
+            "Others": {}
+        },
+        "OPS": {
+            "OGTA": {},
+            "Others": {},
+            "OGTE": {},
+            "IGTA": {},
+            "EWA": {}
+        }
+    }
+
+    return {
+        "revenues": [_build_financial_node(name, children, budget_data.get("revenues", []), actual_data.get("revenues", [])) for name, children in revenue_template.items()],
+        "costs": [_build_financial_node(name, children, budget_data.get("costs", []), actual_data.get("costs", [])) for name, children in costs_template.items()]
+    }
 
 def extract_pl_summary(sheet_name):
     # Extracts monthly totals from ProfitLoss Forecast/Analysis
@@ -167,16 +221,21 @@ def extract_pl_summary(sheet_name):
         return {}
 
 def main():
+    budget = {
+        "costs": extract_financial_data('1. Costs Budgeted'),
+        "revenues": extract_financial_data('1. Revenues Budgeted')
+    }
+
+    actuals = {
+        "costs": extract_financial_data('3. Costs Executed'),
+        "revenues": extract_financial_data('3. Revenues Executed')
+    }
+
     final_data = {
-        "budget": {
-            "costs": extract_financial_data('1. Costs Budgeted'),
-            "revenues": extract_financial_data('1. Revenues Budgeted')
-        },
-        "actuals": {
-            "costs": extract_financial_data('3. Costs Executed'),
-            "revenues": extract_financial_data('3. Revenues Executed')
-        },
-        "goals": extract_exchange_goals()
+        "budget": budget,
+        "actuals": actuals,
+        "financials": build_financial_structure(budget, actuals),
+        "financialRatios": []
     }
     
     # Create directory if not exists

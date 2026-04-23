@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "26e3fc25-e4c3-448e-a166-0af80a2922ca",
+      "month": "Feb",
+      "type": "revenues",
+      "path": [
+        "ELD Products",
+        "EWA"
+      ],
+      "budgeted": 2000,
+      "actual": 1000,
+      "updatedAt": "2026-04-23T09:04:33.850Z",
+      "updatedBy": "admin"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import pandas as pd
 
 file_path = 'Copy of AIESEC in KARACHI Budget Tool 26.27.xlsx'
-sheets_to_inspect = ['1. Costs Budgeted', '1. Revenues Budgeted', '2. Exchange Goals']
+sheets_to_inspect = ['1. Costs Budgeted', '1. Revenues Budgeted']
 
 try:
     for sheet in sheets_to_inspect:
