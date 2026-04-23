@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 
+function apiUrl(path) {
+  const base = import.meta.env.VITE_API_BASE_URL ? String(import.meta.env.VITE_API_BASE_URL) : '';
+  if (!base) return path;
+  return base.replace(/\/+$/, '') + path;
+}
+
 export function useData() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -9,7 +15,7 @@ export function useData() {
     try {
       const cacheBuster = new Date().getTime();
 
-      const resApi = await fetch(`/api/data?t=${cacheBuster}`);
+      const resApi = await fetch(apiUrl(`/api/data?t=${cacheBuster}`));
       if (resApi.ok) {
         const jsonData = await resApi.json();
         setData(jsonData);

@@ -8,6 +8,12 @@ void motion;
 
 const MONTHS = ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
 
+function apiUrl(path) {
+  const base = import.meta.env.VITE_API_BASE_URL ? String(import.meta.env.VITE_API_BASE_URL) : '';
+  if (!base) return path;
+  return base.replace(/\/+$/, '') + path;
+}
+
 function buildCategoryIndex(tree) {
   const categories = [];
   const byCategory = new Map();
@@ -72,7 +78,7 @@ export default function AdminPanel() {
     setLoadingEntries(true);
     setError('');
     try {
-      const res = await fetch('/api/financial/entries', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(apiUrl('/api/financial/entries'), { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('failed_to_load');
       const payload = await res.json();
       setEntries(Array.isArray(payload.entries) ? payload.entries : []);
@@ -103,7 +109,7 @@ export default function AdminPanel() {
       actual: Number(actual || 0)
     };
 
-    const res = await fetch(editingId ? `/api/financial/entries/${editingId}` : '/api/financial/entries', {
+    const res = await fetch(apiUrl(editingId ? `/api/financial/entries/${editingId}` : '/api/financial/entries'), {
       method: editingId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload)
@@ -129,7 +135,7 @@ export default function AdminPanel() {
   }, []);
 
   const onDelete = useCallback(async (id) => {
-    const res = await fetch(`/api/financial/entries/${id}`, {
+    const res = await fetch(apiUrl(`/api/financial/entries/${id}`), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
