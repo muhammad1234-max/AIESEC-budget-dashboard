@@ -17,7 +17,13 @@ module.exports = async (req, res) => {
 
   const secret = getJwtSecret();
   const { username: adminUsername, password: adminPassword } = getAdminConfig();
-  if (!secret || !adminUsername || !adminPassword) return json(res, 500, { error: 'server_not_configured' });
+  if (!secret || !adminUsername || !adminPassword) {
+    const missing = [];
+    if (!secret) missing.push('JWT_SECRET');
+    if (!adminUsername) missing.push('ADMIN_USERNAME');
+    if (!adminPassword) missing.push('ADMIN_PASSWORD');
+    return json(res, 500, { error: 'server_not_configured', missing });
+  }
 
   const ip =
     (req.headers && (req.headers['x-forwarded-for'] || req.headers['x-real-ip'])) ||
