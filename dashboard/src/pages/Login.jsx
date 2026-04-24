@@ -16,17 +16,24 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setError('');
+    setError(null);
     try {
       await login(username, password);
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err?.message || 'login_failed');
+      if (err && typeof err === 'object') {
+        setError({
+          code: err.code || err.message || 'login_failed',
+          missing: Array.isArray(err.missing) ? err.missing : null
+        });
+      } else {
+        setError({ code: 'login_failed', missing: null });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -78,12 +85,14 @@ export default function Login() {
             </div>
           </label>
 
-          {error && (
+          {error?.code && (
             <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-500">
-              {error === 'invalid_credentials'
+              {error.code === 'invalid_credentials'
                 ? 'Invalid username or password.'
-                : error === 'server_not_configured'
-                  ? 'Admin login is not configured on the server. Set JWT_SECRET, ADMIN_USERNAME, and ADMIN_PASSWORD in Vercel environment variables, then redeploy.'
+                : error.code === 'server_not_configured'
+                  ? `Admin login is not configured on the server. Missing: ${(
+                    error.missing && error.missing.length ? error.missing.join(', ') : 'JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD'
+                  )}. Set them in Vercel environment variables for the correct environment (Production/Preview), then redeploy.`
                   : 'Login failed. Please try again.'}
             </div>
           )}

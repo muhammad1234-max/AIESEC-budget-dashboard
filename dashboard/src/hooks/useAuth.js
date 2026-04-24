@@ -22,8 +22,11 @@ export function AuthProvider({ children }) {
 
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      const message = payload?.error || 'login_failed';
-      throw new Error(message);
+      const code = payload?.error || 'login_failed';
+      const err = new Error(code);
+      err.code = code;
+      err.missing = Array.isArray(payload?.missing) ? payload.missing : undefined;
+      throw err;
     }
 
     const payload = await res.json();
