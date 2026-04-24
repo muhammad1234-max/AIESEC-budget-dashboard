@@ -12,6 +12,19 @@
       "actual": 1000,
       "updatedAt": "2026-04-23T09:04:33.850Z",
       "updatedBy": "admin"
+    },
+    {
+      "id": "62879fbe-3cbb-45fd-b39d-24d80de105af",
+      "month": "Feb",
+      "type": "revenues",
+      "path": [
+        "ELD Products",
+        "EWA"
+      ],
+      "budgeted": 20000,
+      "actual": 15000,
+      "updatedAt": "2026-04-24T12:20:51.019Z",
+      "updatedBy": "admin"
     }
   ]
 }
